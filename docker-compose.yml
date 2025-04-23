@@ -1,0 +1,51 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: test_mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: main
+      MYSQL_USER: m_boiko
+      MYSQL_PASSWORD: 1234
+      MYSQL_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-hmysql", "-pm_boiko"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: test_rabbit
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  writing_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test_writing_service
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DB_USERNAME: m_boiko
+      PASSWORD: 1234
+      DATABASE: main
+      PORT: 3306
+      HOST: mysql
+      DBDRIVER: mysql
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
